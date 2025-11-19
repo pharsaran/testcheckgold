@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Gold Trading System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>Real-Time Gold Trading System</h1>
+                <p class="header-subtitle">ระบบซื้อขายทองคำแบบเรียลไทม์</p>
+                <div class="status-indicator">
+                    <span class="status-dot" id="connection-status"></span>
+                    <span class="status-text" id="connection-text">กำลังเชื่อมต่อ...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Price Display Section -->
+        <section class="price-section">
+            <div class="section-header">
+                <h2>ราคาทองคำแบบเรียลไทม์</h2>
+                <div class="update-indicator">
+                    <span class="update-dot"></span>
+                    <span class="update-text">อัปเดตล่าสุด: <span id="last-update">-</span></span>
+                </div>
+            </div>
+            <div class="price-grid">
+                <div class="price-card premium" id="price-spot">
+                    <div class="card-header">
+                        <h3>Gold Spot</h3>
+                        <span class="card-badge">Spot Price</span>
+                    </div>
+                    <div class="price-info">
+                        <div class="price-main">
+                            <span class="value" id="spot-price">-</span>
+                            <span class="unit">บาท/ออนซ์</span>
+                        </div>
+                        <div class="price-source">
+                            <span class="source-icon">📊</span>
+                            <span>th.investing.com</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="price-card" id="price-gold9999">
+                    <div class="card-header">
+                        <h3>Gold 99.99%</h3>
+                        <span class="card-badge">Foreign Market</span>
+                    </div>
+                    <div class="price-info">
+                        <div class="price-row">
+                            <div class="price-item buy">
+                                <span class="price-label">ราคาซื้อ</span>
+                                <span class="value buy" id="gold9999-buy">-</span>
+                                <span class="unit">บาท</span>
+                            </div>
+                            <div class="price-item sell">
+                                <span class="price-label">ราคาขาย</span>
+                                <span class="value sell" id="gold9999-sell">-</span>
+                                <span class="unit">บาท</span>
+                            </div>
+                        </div>
+                        <div class="price-source">
+                            <span class="source-icon">🏛️</span>
+                            <span>สมาคมค้าทองคำ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="price-card" id="price-gold9650">
+                    <div class="card-header">
+                        <h3>Gold 96.50%</h3>
+                        <span class="card-badge">Gold Price by GTA </span>
+                    </div>
+                    <div class="price-info">
+                        <div class="price-row">
+                            <div class="price-item buy">
+                                <span class="price-label">ราคาซื้อ</span>
+                                <span class="value buy" id="gold9650-buy">-</span>
+                                <span class="unit">บาท</span>
+                            </div>
+                            <div class="price-item sell">
+                                <span class="price-label">ราคาขาย</span>
+                                <span class="value sell" id="gold9650-sell">-</span>
+                                <span class="unit">บาท</span>
+                            </div>
+                        </div>
+                        <div class="price-source">
+                            <span class="source-icon">🏛️</span>
+                            <span>สมาคมค้าทองคำ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transaction Section -->
+        <section class="transaction-section">
+            <div class="transaction-header">
+                <h2>ธุรกรรม (Transactions)</h2>
+                <div class="transaction-controls">
+                    <button class="btn-action buy-btn" id="btn-buy">
+                        <span class="btn-icon">📈</span>
+                        <span>ซื้อ (Buy)</span>
+                    </button>
+                    <button class="btn-action sell-btn" id="btn-sell">
+                        <span class="btn-icon">📉</span>
+                        <span>ขาย (Sell)</span>
+                    </button>
+                </div>
+            </div>
+            <div class="transaction-table-container">
+                <table class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Price</th>
+                            <th>State</th>
+                            <th>Date/Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-tbody">
+                        <tr>
+                            <td colspan="4" class="loading">กำลังโหลดข้อมูล...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Status Control Section -->
+        <section class="status-section">
+            <div class="section-header">
+                <h2>ควบคุมสถานะราคา</h2>
+            </div>
+            <div class="status-control-wrapper">
+                <button class="btn-control" id="btn-status-control">
+                    <span class="btn-icon">⚙️</span>
+                    <span>เปิดการควบคุมสถานะ</span>
+                </button>
+            </div>
+            
+            <div class="status-modal" id="status-modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>ควบคุมสถานะราคาทองคำ</h3>
+                        <button class="btn-close" id="btn-close-modal">&times;</button>
+                    </div>
+                    
+                    <div class="status-groups">
+                        <!-- Gold Spot Status -->
+                        <div class="status-group">
+                            <h4>Gold Spot Status</h4>
+                            <div class="radio-group" data-price-type="spot">
+                                <label class="radio-option">
+                                    <input type="radio" name="spot-status" value="online" checked>
+                                    <span class="radio-circle online"></span>
+                                    <span>Online</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="spot-status" value="pause">
+                                    <span class="radio-circle"></span>
+                                    <span>Pause</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="spot-status" value="stop">
+                                    <span class="radio-circle"></span>
+                                    <span>Stop</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Gold 99.99% Status -->
+                        <div class="status-group">
+                            <h4>Gold 99.99% Status</h4>
+                            <div class="radio-group" data-price-type="gold9999">
+                                <label class="radio-option">
+                                    <input type="radio" name="gold9999-status" value="online" checked>
+                                    <span class="radio-circle online"></span>
+                                    <span>Online</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gold9999-status" value="pause">
+                                    <span class="radio-circle"></span>
+                                    <span>Pause</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gold9999-status" value="stop">
+                                    <span class="radio-circle"></span>
+                                    <span>Stop</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Gold 96.50% Status -->
+                        <div class="status-group">
+                            <h4>Gold 96.50% Status</h4>
+                            <div class="radio-group" data-price-type="gold9650">
+                                <label class="radio-option">
+                                    <input type="radio" name="gold9650-status" value="online" checked>
+                                    <span class="radio-circle online"></span>
+                                    <span>Online</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gold9650-status" value="pause">
+                                    <span class="radio-circle"></span>
+                                    <span>Pause</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="gold9650-status" value="stop">
+                                    <span class="radio-circle"></span>
+                                    <span>Stop</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn-save" id="btn-save-status">Save</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
