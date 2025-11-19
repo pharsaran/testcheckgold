@@ -1,0 +1,1 @@
+หลังจาก clone โปเจคแล้ว ให้ ใช้คำสั่ง npm install  ก่อน เพื่อติดตั้ง lib  express ของ node.js
